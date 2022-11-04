@@ -4,6 +4,61 @@ using UnityEngine;
 using UnityEngine.UI;
 using ZXing;
 using TMPro;
+using System;
+using System.Net;
+using System.IO;
+using System.Threading;
+
+
+// API Zeug
+public enum httpVerb
+{
+    GET,
+    POST,
+    PUT,
+    DELETE
+}
+
+public class RestClient
+{
+    public string url;
+    public httpVerb methode;
+
+    public RestClient(string url)
+    {
+        this.url = url;
+        this.methode = httpVerb.GET;
+    }
+
+    public string makeRequest()
+    {
+        string strResponse = "";
+
+        HttpWebRequest request = (HttpWebRequest) WebRequest.Create(url);
+
+        request.Method = this.methode.ToString();
+
+        using(HttpWebResponse response = (HttpWebResponse) request.GetResponse())
+        {
+            if(response.StatusCode != HttpStatusCode.OK)
+            {
+                throw new Exception("error nicht erreichbar");
+            }
+            using(Stream responseStream = response.GetResponseStream())
+            {
+                if(responseStream != null)
+                {
+                    using(StreamReader reader = new StreamReader(responseStream))
+                    {
+                        strResponse = reader.ReadToEnd();
+                    }
+                }
+            }
+        }
+
+        return strResponse;
+    }
+}
 
 public class Camera_Script : MonoBehaviour
 {
@@ -21,6 +76,9 @@ public class Camera_Script : MonoBehaviour
     // Gets the list of devices and prints them to the console.
     void Start()
     {
+        // RestClient resti = new RestClient("https://api.coindesk.com/v1/bpi/currentprice.json");
+        // Debug.Log(resti.makeRequest());
+
         WebCamDevice[] devices = WebCamTexture.devices;
         myCam = new WebCamTexture(devices[0].name, Screen.width, Screen.height);
         
@@ -82,6 +140,9 @@ public class Camera_Script : MonoBehaviour
                 {
                     _textOut.text = "Toooolllllll";
                 }
+                RestClient resti = new RestClient(result.Text);
+                string Data = getBetween(resti.makeRequest(), "currentConditions\":{\"temp\":", "}}");
+                _textOut.text = Data;
 
             }
             else
@@ -93,6 +154,20 @@ public class Camera_Script : MonoBehaviour
         {
             _textOut.text = "Faild in TRY";
         }
+    }
+
+
+    public static string getBetween(string strSource, string strStart, string strEnd)
+    {
+        if (strSource.Contains(strStart) && strSource.Contains(strEnd))
+        {
+            int Start, End;
+            Start = strSource.IndexOf(strStart, 0) + strStart.Length;
+            End = strSource.IndexOf(strEnd, Start);
+            return strSource.Substring(Start, End - Start);
+        }
+
+    return "";
     }
     
 }
